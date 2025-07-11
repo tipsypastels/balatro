@@ -70,7 +70,6 @@ impl HandTypeState<'_> {
 }
 
 #[derive(Debug)]
-// pub struct HandTypeStateMut<'a>(HandType, &'a mut InnerState);
 pub struct HandTypeStateMut<'a> {
     hand_type: HandType,
     state: &'a mut InnerState,
