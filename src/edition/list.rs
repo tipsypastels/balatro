@@ -25,7 +25,7 @@ impl<T: HasEdition<Negative = ()>> ListWithNegatives<T> {
     }
 
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if is_negative(&item) {
+        if item.is_negative() {
             self.vec.push(item);
             self.neg_cnt += 1;
             Ok(())
@@ -39,16 +39,11 @@ impl<T: HasEdition<Negative = ()>> ListWithNegatives<T> {
 
     pub fn remove(&mut self, index: usize) -> T {
         let item = self.vec.remove(index);
-        if is_negative(&item) {
+        if item.is_negative() {
             self.neg_cnt -= 1;
         }
         item
     }
-}
-
-fn is_negative<T: HasEdition<Negative = ()>>(item: &T) -> bool {
-    item.edition()
-        .is_some_and(|e| matches!(e, Edition::Negative(())))
 }
 
 #[cfg(test)]
@@ -135,7 +130,7 @@ mod tests {
         assert_eq!(list.vec.len(), 4);
         assert_eq!(list.cap(), 4);
 
-        assert!(is_negative(&list.remove(1)));
+        assert!(list.remove(1).is_negative());
 
         assert_eq!(list.vec.len(), 3);
         assert_eq!(list.cap(), 3);
