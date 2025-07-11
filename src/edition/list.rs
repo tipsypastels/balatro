@@ -1,11 +1,10 @@
 use super::*;
-use std::ops::Deref;
 
-#[derive(Debug)]
-pub struct ListWithNegatives<T: HasEdition<Negative = ()>> {
-    vec: Vec<T>,
-    base_cap: usize,
-    neg_cnt: usize,
+#[derive(Debug, Clone)]
+pub(crate) struct ListWithNegatives<T: HasEdition<Negative = ()>> {
+    pub vec: Vec<T>,
+    pub base_cap: usize,
+    pub neg_cnt: usize,
 }
 
 impl<T: HasEdition<Negative = ()>> ListWithNegatives<T> {
@@ -18,11 +17,7 @@ impl<T: HasEdition<Negative = ()>> ListWithNegatives<T> {
     }
 
     pub fn is_full(&self) -> bool {
-        self.len() == self.cap()
-    }
-
-    pub fn base_cap(&self) -> usize {
-        self.base_cap
+        self.vec.len() == self.cap()
     }
 
     pub fn cap(&self) -> usize {
@@ -48,14 +43,6 @@ impl<T: HasEdition<Negative = ()>> ListWithNegatives<T> {
             self.neg_cnt -= 1;
         }
         item
-    }
-}
-
-impl<T: HasEdition<Negative = ()>> Deref for ListWithNegatives<T> {
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        &self.vec
     }
 }
 
@@ -92,7 +79,7 @@ mod tests {
         assert!(list.push(X).is_ok());
         assert!(list.is_full());
 
-        assert_eq!(list.len(), 3);
+        assert_eq!(list.vec.len(), 3);
         assert_eq!(list.cap(), 3);
     }
 
@@ -105,7 +92,7 @@ mod tests {
         assert!(list.push(X).is_ok());
         assert!(!list.is_full());
 
-        assert_eq!(list.len(), 3);
+        assert_eq!(list.vec.len(), 3);
         assert_eq!(list.cap(), 4);
     }
 
@@ -119,7 +106,7 @@ mod tests {
         assert!(list.push(X).is_ok());
         assert!(list.is_full());
 
-        assert_eq!(list.len(), 4);
+        assert_eq!(list.vec.len(), 4);
         assert_eq!(list.cap(), 4);
     }
 
@@ -145,12 +132,12 @@ mod tests {
         assert!(list.push(X).is_ok());
         assert!(list.push(X).is_ok());
 
-        assert_eq!(list.len(), 4);
+        assert_eq!(list.vec.len(), 4);
         assert_eq!(list.cap(), 4);
 
         assert!(is_negative(&list.remove(1)));
 
-        assert_eq!(list.len(), 3);
+        assert_eq!(list.vec.len(), 3);
         assert_eq!(list.cap(), 3);
     }
 }

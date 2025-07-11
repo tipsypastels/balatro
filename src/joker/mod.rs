@@ -1,16 +1,18 @@
-use crate::{Edition, HasEdition, Money, ScoreBuilder};
-use std::{any::Any, cell::RefCell, fmt::Debug, rc::Rc};
+use crate::{Edition, HasEdition, Money};
+use std::{any::Any, fmt::Debug, rc::Rc};
 
 mod event;
-mod jokers;
+mod impls;
+mod list;
 
 pub use event::*;
-pub use jokers::*;
+pub use impls::*;
+pub use list::*;
 
 #[derive(Debug, Clone)]
 pub struct Joker {
     // TODO: Add sync feature.
-    kind: Rc<RefCell<dyn JokerKind>>,
+    kind: Rc<dyn JokerKind>,
     edition: Option<Edition<Self>>,
     // TODO: Add stickers.
 }
@@ -27,7 +29,7 @@ impl HasEdition for Joker {
 impl Joker {
     pub fn new(kind: impl JokerKind) -> Self {
         Self {
-            kind: Rc::new(RefCell::new(kind)),
+            kind: Rc::new(kind),
             edition: None,
         }
     }
@@ -36,17 +38,22 @@ impl Joker {
         JokerBuilder(Self::new(kind))
     }
 
+    pub fn is<J: JokerKind>(&self) -> bool {
+        let kind: &dyn Any = &*self.kind;
+        kind.is::<J>()
+    }
+
     pub fn name(&self) -> &'static str {
-        self.kind.borrow().name()
+        self.kind.name()
     }
 
     pub fn rarity(&self) -> Rarity {
-        self.kind.borrow().rarity()
+        self.kind.rarity()
     }
 
     pub fn price(&self) -> Money {
         // TODO: If rental, Money(1).
-        self.kind.borrow().price()
+        self.kind.price()
     }
 }
 
@@ -69,7 +76,7 @@ pub trait JokerKind: Any + Debug {
     fn rarity(&self) -> Rarity;
     fn price(&self) -> Money;
 
-    fn run_independent(&mut self, event: RunIndependentEvent) {
+    fn run_independent(&self, event: RunIndependentEvent) {
         let _ = event;
     }
 }

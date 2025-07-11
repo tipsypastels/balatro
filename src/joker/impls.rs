@@ -18,7 +18,7 @@ impl JokerKind for JimboJoker {
         Money(2)
     }
 
-    fn run_independent(&mut self, event: RunIndependentEvent) {
+    fn run_independent(&self, event: RunIndependentEvent) {
         event.score.mult += 4;
     }
 }
@@ -39,7 +39,26 @@ impl JokerKind for MisprintJoker {
         Money(4)
     }
 
-    fn run_independent(&mut self, event: RunIndependentEvent) {
+    fn run_independent(&self, event: RunIndependentEvent) {
         event.score.mult += event.rng.random_range(0..=23);
     }
+}
+
+#[derive(Debug)]
+pub struct StencilJoker;
+
+impl JokerKind for StencilJoker {
+    fn name(&self) -> &'static str {
+        "Joker Stencil"
+    }
+
+    fn rarity(&self) -> Rarity {
+        Rarity::Uncommon
+    }
+
+    fn price(&self) -> Money {
+        Money(8)
+    }
+
+    fn run_independent(&self, event: RunIndependentEvent) {}
 }
