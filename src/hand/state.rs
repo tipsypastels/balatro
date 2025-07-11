@@ -189,6 +189,15 @@ mod tests {
     }
 
     #[test]
+    fn getters_return_same_hand_type() {
+        let states = HandTypeStates::default();
+
+        for hand_type in HandType::variants() {
+            assert_eq!(states.get(hand_type).hand_type(), hand_type);
+        }
+    }
+
+    #[test]
     fn base_score() {
         let states = HandTypeStates::default();
 
@@ -229,6 +238,17 @@ mod tests {
         for hand_type in HandType::variants() {
             assert_eq!(states.get(hand_type).level().get(), 2);
         }
+    }
+
+    #[test]
+    fn increasing_plays() {
+        let states = HandTypeStates::default();
+
+        assert_eq!(states.get(HighCard).plays(), 0);
+
+        let states = states.plays_up(HighCard);
+
+        assert_eq!(states.get(HighCard).plays(), 1);
     }
 
     #[test]
