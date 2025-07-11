@@ -2,27 +2,55 @@ use super::HandType;
 use crate::{Chips, ChipsAllowMul, Mult, Planet};
 use std::num::NonZero;
 
-#[derive(Default, Debug, Clone)]
-pub struct HandTypeStates {
-    pub(super) high_card: InnerState,
-    pub(super) pair: InnerState,
-    pub(super) two_pair: InnerState,
-    pub(super) three_of_a_kind: InnerState,
-    pub(super) straight: InnerState,
-    pub(super) flush: InnerState,
-    pub(super) full_house: InnerState,
-    pub(super) four_of_a_kind: InnerState,
-    pub(super) straight_flush: InnerState,
-    pub(super) five_of_a_kind: InnerState,
-    pub(super) flush_house: InnerState,
-    pub(super) flush_five: InnerState,
+macro_rules! states {
+    ($($field:ident: $member:ident),*$(,)?) => {
+        #[derive(Debug, Default, Clone)]
+        pub struct HandTypeStates {
+            $($field: InnerState),*
+        }
+
+        impl HandTypeStates {
+            $(
+                pub const fn $field(&self) -> HandTypeState {
+                    self.get(HandType::$member)
+                }
+            )*
+
+            const fn get_state(&self, hand_type: HandType) -> InnerState {
+                match hand_type {
+                    $(HandType::$member => { self.$field })*
+                }
+            }
+
+            const fn get_state_mut(&mut self, hand_type: HandType) -> &mut InnerState {
+                match hand_type {
+                    $(HandType::$member => { &mut self.$field })*
+                }
+            }
+        }
+    };
+}
+
+states! {
+    high_card: HighCard,
+    pair: Pair,
+    two_pair: TwoPair,
+    three_of_a_kind: ThreeOfAKind,
+    straight: Straight,
+    flush: Flush,
+    full_house: FullHouse,
+    four_of_a_kind: FourOfAKind,
+    straight_flush: StraightFlush,
+    five_of_a_kind: FiveOfAKind,
+    flush_house: FlushHouse,
+    flush_five: FlushFive,
 }
 
 impl HandTypeStates {
-    pub fn get(&self, hand_type: HandType) -> HandTypeState {
+    pub const fn get(&self, hand_type: HandType) -> HandTypeState {
         HandTypeState {
             hand_type,
-            inner: hand_type.get_state(self).clone(),
+            inner: self.get_state(hand_type),
         }
     }
 
@@ -43,11 +71,11 @@ impl HandTypeStates {
     }
 
     fn update(&self, hand_type: HandType, f: impl FnOnce(InnerState) -> InnerState) -> Self {
-        let old_state = hand_type.get_state(self).clone();
+        let old_state = self.get_state(hand_type);
         let new_state = f(old_state);
 
         let mut this = self.clone();
-        *hand_type.get_state_mut(&mut this) = new_state;
+        *this.get_state_mut(hand_type) = new_state;
         this
     }
 
@@ -55,10 +83,10 @@ impl HandTypeStates {
         let mut this = self.clone();
 
         for hand_type in HandType::variants() {
-            let old_state = hand_type.get_state(self).clone();
+            let old_state = self.get_state(hand_type);
             let new_state = f(old_state);
 
-            *hand_type.get_state_mut(&mut this) = new_state;
+            *this.get_state_mut(hand_type) = new_state;
         }
 
         this
@@ -100,21 +128,21 @@ impl HandTypeState {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(super) struct InnerState {
+#[derive(Debug, Clone, Copy)]
+struct InnerState {
     level: NonZero<u16>,
     plays: u16,
 }
 
 impl InnerState {
     fn level_up(self) -> Self {
-        let mut this = self.clone();
+        let mut this = self;
         this.level = this.level.saturating_add(1);
         this
     }
 
     fn plays_up(self) -> Self {
-        let mut this = self.clone();
+        let mut this = self;
         this.plays += 1;
         this
     }
