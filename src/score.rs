@@ -1,6 +1,7 @@
 use paste::paste;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
+// TODO: Consider making the u64 private, `ChipsAllowMul` is toothless otherwise.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Chips(pub u64);
 

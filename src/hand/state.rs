@@ -20,38 +20,47 @@ pub struct HandTypeStates {
 
 impl HandTypeStates {
     pub const fn get(&self, hand_type: HandType) -> HandTypeState {
-        HandTypeState(hand_type, hand_type.get_state(self))
+        HandTypeState {
+            hand_type,
+            state: hand_type.get_state(self),
+        }
     }
 
     pub const fn get_mut(&mut self, hand_type: HandType) -> HandTypeStateMut {
-        HandTypeStateMut(hand_type, hand_type.get_state_mut(self))
+        HandTypeStateMut {
+            hand_type,
+            state: hand_type.get_state_mut(self),
+        }
     }
 }
 
 #[derive(Debug)]
-pub struct HandTypeState<'a>(HandType, &'a InnerState);
+pub struct HandTypeState<'a> {
+    hand_type: HandType,
+    state: &'a InnerState,
+}
 
 impl HandTypeState<'_> {
     pub const fn hand_type(&self) -> HandType {
-        self.0
+        self.hand_type
     }
 
     pub const fn is_unlocked(&self) -> bool {
-        !self.0.is_secret() || self.1.1 > 0
+        !self.hand_type.is_secret() || self.state.plays > 0
     }
 
     pub const fn level(&self) -> NonZero<u16> {
-        self.1.0
+        self.state.level
     }
 
     pub const fn plays(&self) -> u16 {
-        self.1.1
+        self.state.plays
     }
 
     pub fn score(&self) -> (Chips, Mult) {
-        let (chips, mult) = self.0.base_score();
-        let (addl_chips, addl_mult) = self.0.addl_score_per_level();
-        let addl_times = self.1.0.get() as u64 - 1;
+        let (chips, mult) = self.hand_type.base_score();
+        let (addl_chips, addl_mult) = self.hand_type.addl_score_per_level();
+        let addl_times = self.state.level.get() as u64 - 1;
 
         (
             chips + (ChipsAllowMul::new(addl_chips) * addl_times).finish(),
@@ -61,7 +70,11 @@ impl HandTypeState<'_> {
 }
 
 #[derive(Debug)]
-pub struct HandTypeStateMut<'a>(HandType, &'a mut InnerState);
+// pub struct HandTypeStateMut<'a>(HandType, &'a mut InnerState);
+pub struct HandTypeStateMut<'a> {
+    hand_type: HandType,
+    state: &'a mut InnerState,
+}
 
 impl HandTypeStateMut<'_> {
     pub const fn hand_type(&self) -> HandType {
@@ -85,24 +98,33 @@ impl HandTypeStateMut<'_> {
     }
 
     pub fn level_up(&mut self) {
-        self.1.0 = self.1.0.saturating_add(1);
+        self.state.level = self.state.level.saturating_add(1);
     }
 
     pub fn plays_up(&mut self) {
-        self.1.1 += 1;
+        self.state.plays += 1;
     }
 
     const fn as_ref(&self) -> HandTypeState {
-        HandTypeState(self.0, &*self.1)
+        HandTypeState {
+            hand_type: self.hand_type,
+            state: self.state,
+        }
     }
 }
 
 #[derive(Debug)]
-pub(super) struct InnerState(NonZero<u16>, u16);
+pub(super) struct InnerState {
+    level: NonZero<u16>,
+    plays: u16,
+}
 
 impl Default for InnerState {
     fn default() -> Self {
-        Self(unsafe { NonZero::new_unchecked(1) }, 0)
+        Self {
+            level: unsafe { NonZero::new_unchecked(1) },
+            plays: 0,
+        }
     }
 }
 
