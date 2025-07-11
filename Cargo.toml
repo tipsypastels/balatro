@@ -1,0 +1,14 @@
+[package]
+name = "balatro"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = [".", "./macros"]
+
+[dependencies]
+enum-assoc = "1.2.4"
+balatro-macros = { path = "./macros" }
+paste = "1.0.15"
+thiserror = "2.0.12"
+perfect-derive = "0.1.5"
