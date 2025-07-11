@@ -1,6 +1,12 @@
 use crate::{Edition, HasEdition, Money, ScoreBuilder};
 use std::{any::Any, cell::RefCell, fmt::Debug, rc::Rc};
 
+mod event;
+mod jokers;
+
+pub use event::*;
+pub use jokers::*;
+
 #[derive(Debug, Clone)]
 pub struct Joker {
     // TODO: Add sync feature.
@@ -63,8 +69,8 @@ pub trait JokerKind: Any + Debug {
     fn rarity(&self) -> Rarity;
     fn price(&self) -> Money;
 
-    fn run_independent(&mut self, score: &mut ScoreBuilder) {
-        let _ = score;
+    fn run_independent(&mut self, event: RunIndependentEvent) {
+        let _ = event;
     }
 }
 

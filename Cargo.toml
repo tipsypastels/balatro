@@ -12,3 +12,4 @@ balatro-macros = { path = "./macros" }
 paste = "1.0.15"
 thiserror = "2.0.12"
 perfect-derive = "0.1.5"
+rand = "0.9.1"
