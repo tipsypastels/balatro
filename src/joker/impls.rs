@@ -1,64 +1,30 @@
-use super::{JokerKind, RunIndependentEvent};
-use crate::{Money, Rarity};
-use rand::Rng;
+mod jimbo;
+mod misprint;
+mod stencil;
 
-#[derive(Debug)]
-pub struct JimboJoker;
+pub use jimbo::*;
+pub use misprint::*;
+pub use stencil::*;
 
-impl JokerKind for JimboJoker {
-    fn name(&self) -> &'static str {
-        "Joker"
+#[allow(unused)]
+mod prelude {
+    pub use crate::*;
+    pub use rand::Rng;
+
+    // TODO: Improve ergonomics a lot.
+    #[cfg(test)]
+    macro_rules! jokers {
+        ($size:literal: $($kind:expr),*$(,)?) => {{
+            let mut slate = Slate::<Joker>::new($size);
+
+            $(
+                slate.push(Joker::new($kind)).unwrap();
+            )*
+
+            slate
+        }};
     }
 
-    fn rarity(&self) -> Rarity {
-        Rarity::Common
-    }
-
-    fn price(&self) -> Money {
-        Money(2)
-    }
-
-    fn run_independent(&self, event: RunIndependentEvent) {
-        event.score.mult += 4;
-    }
-}
-
-#[derive(Debug)]
-pub struct MisprintJoker;
-
-impl JokerKind for MisprintJoker {
-    fn name(&self) -> &'static str {
-        "Misprint"
-    }
-
-    fn rarity(&self) -> Rarity {
-        Rarity::Common
-    }
-
-    fn price(&self) -> Money {
-        Money(4)
-    }
-
-    fn run_independent(&self, event: RunIndependentEvent) {
-        event.score.mult += event.rng.random_range(0..=23);
-    }
-}
-
-#[derive(Debug)]
-pub struct StencilJoker;
-
-impl JokerKind for StencilJoker {
-    fn name(&self) -> &'static str {
-        "Joker Stencil"
-    }
-
-    fn rarity(&self) -> Rarity {
-        Rarity::Uncommon
-    }
-
-    fn price(&self) -> Money {
-        Money(8)
-    }
-
-    fn run_independent(&self, event: RunIndependentEvent) {}
+    #[cfg(test)]
+    pub(crate) use jokers;
 }

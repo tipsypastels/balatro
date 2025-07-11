@@ -1,13 +1,13 @@
 use crate::{Edition, HasEdition, Money};
 use std::{any::Any, fmt::Debug, rc::Rc};
 
-mod event;
 mod impls;
-mod list;
+mod scorer;
+mod slate;
 
-pub use event::*;
 pub use impls::*;
-pub use list::*;
+pub use scorer::*;
+pub use slate::*;
 
 #[derive(Debug, Clone)]
 pub struct Joker {
@@ -76,8 +76,8 @@ pub trait JokerKind: Any + Debug {
     fn rarity(&self) -> Rarity;
     fn price(&self) -> Money;
 
-    fn run_independent(&self, event: RunIndependentEvent) {
-        let _ = event;
+    fn run_independent(&self, scorer: &mut Scorer) {
+        let _ = scorer;
     }
 }
 

@@ -63,9 +63,3 @@ impl ChipsAllowMul {
         Chips(self.0)
     }
 }
-
-#[derive(Debug)]
-pub struct ScoreBuilder {
-    pub chips: Chips,
-    pub mult: Mult,
-}

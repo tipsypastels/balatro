@@ -2,9 +2,9 @@ use crate::sealed::Sealed;
 use perfect_derive::perfect_derive;
 use std::convert::Infallible;
 
-mod list;
+mod slate;
 
-pub(crate) use list::*;
+pub use slate::*;
 
 #[perfect_derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Edition<T: HasEdition> {

@@ -1,8 +1,8 @@
 use super::HandType;
-use crate::{Chips, ChipsAllowMul, Mult};
+use crate::{Chips, ChipsAllowMul, Mult, Planet};
 use std::num::NonZero;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct HandTypeStates {
     pub(super) high_card: InnerState,
     pub(super) pair: InnerState,
@@ -19,48 +19,79 @@ pub struct HandTypeStates {
 }
 
 impl HandTypeStates {
-    pub const fn get(&self, hand_type: HandType) -> HandTypeState {
+    pub fn get(&self, hand_type: HandType) -> HandTypeState {
         HandTypeState {
             hand_type,
-            state: hand_type.get_state(self),
+            inner: hand_type.get_state(self).clone(),
         }
     }
 
-    pub const fn get_mut(&mut self, hand_type: HandType) -> HandTypeStateMut {
-        HandTypeStateMut {
-            hand_type,
-            state: hand_type.get_state_mut(self),
+    pub fn use_planet(&self, planet: Planet) -> Self {
+        self.level_up(planet.hand_type())
+    }
+
+    pub fn use_black_hole(&self) -> Self {
+        self.update_all(InnerState::level_up)
+    }
+
+    pub fn level_up(&self, hand_type: HandType) -> Self {
+        self.update(hand_type, InnerState::level_up)
+    }
+
+    pub fn plays_up(&self, hand_type: HandType) -> Self {
+        self.update(hand_type, InnerState::plays_up)
+    }
+
+    fn update(&self, hand_type: HandType, f: impl FnOnce(InnerState) -> InnerState) -> Self {
+        let old_state = hand_type.get_state(self).clone();
+        let new_state = f(old_state);
+
+        let mut this = self.clone();
+        *hand_type.get_state_mut(&mut this) = new_state;
+        this
+    }
+
+    fn update_all(&self, f: impl Fn(InnerState) -> InnerState) -> Self {
+        let mut this = self.clone();
+
+        for hand_type in HandType::variants() {
+            let old_state = hand_type.get_state(self).clone();
+            let new_state = f(old_state);
+
+            *hand_type.get_state_mut(&mut this) = new_state;
         }
+
+        this
     }
 }
 
-#[derive(Debug)]
-pub struct HandTypeState<'a> {
+#[derive(Debug, Clone)]
+pub struct HandTypeState {
     hand_type: HandType,
-    state: &'a InnerState,
+    inner: InnerState,
 }
 
-impl HandTypeState<'_> {
-    pub const fn hand_type(&self) -> HandType {
+impl HandTypeState {
+    pub const fn hand_type(self) -> HandType {
         self.hand_type
     }
 
-    pub const fn is_unlocked(&self) -> bool {
-        !self.hand_type.is_secret() || self.state.plays > 0
+    pub const fn is_unlocked(self) -> bool {
+        !self.hand_type.is_secret() || self.inner.plays > 0
     }
 
-    pub const fn level(&self) -> NonZero<u16> {
-        self.state.level
+    pub const fn level(self) -> NonZero<u16> {
+        self.inner.level
     }
 
-    pub const fn plays(&self) -> u16 {
-        self.state.plays
+    pub const fn plays(self) -> u16 {
+        self.inner.plays
     }
 
-    pub fn score(&self) -> (Chips, Mult) {
+    pub fn score(self) -> (Chips, Mult) {
         let (chips, mult) = self.hand_type.base_score();
         let (addl_chips, addl_mult) = self.hand_type.addl_score_per_level();
-        let addl_times = self.state.level.get() as u64 - 1;
+        let addl_times = self.inner.level.get() as u64 - 1;
 
         (
             chips + (ChipsAllowMul::new(addl_chips) * addl_times).finish(),
@@ -69,53 +100,24 @@ impl HandTypeState<'_> {
     }
 }
 
-#[derive(Debug)]
-pub struct HandTypeStateMut<'a> {
-    hand_type: HandType,
-    state: &'a mut InnerState,
-}
-
-impl HandTypeStateMut<'_> {
-    pub const fn hand_type(&self) -> HandType {
-        self.as_ref().hand_type()
-    }
-
-    pub const fn is_unlocked(&self) -> bool {
-        self.as_ref().is_unlocked()
-    }
-
-    pub const fn level(&self) -> NonZero<u16> {
-        self.as_ref().level()
-    }
-
-    pub const fn plays(&self) -> u16 {
-        self.as_ref().plays()
-    }
-
-    pub fn score(&self) -> (Chips, Mult) {
-        self.as_ref().score()
-    }
-
-    pub fn level_up(&mut self) {
-        self.state.level = self.state.level.saturating_add(1);
-    }
-
-    pub fn plays_up(&mut self) {
-        self.state.plays += 1;
-    }
-
-    const fn as_ref(&self) -> HandTypeState {
-        HandTypeState {
-            hand_type: self.hand_type,
-            state: self.state,
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) struct InnerState {
     level: NonZero<u16>,
     plays: u16,
+}
+
+impl InnerState {
+    fn level_up(self) -> Self {
+        let mut this = self.clone();
+        this.level = this.level.saturating_add(1);
+        this
+    }
+
+    fn plays_up(self) -> Self {
+        let mut this = self.clone();
+        this.plays += 1;
+        this
+    }
 }
 
 impl Default for InnerState {
@@ -132,29 +134,73 @@ mod tests {
     use super::*;
     use HandType::*;
 
+    macro_rules! assert_levels {
+        ($states:ident, { $($hand_type:ident => $level:literal),*$(,)? }) => {
+            for hand_type in HandType::variants() {
+                let expected = match hand_type {
+                    $($hand_type =>  { $level })*
+                    _ => 1,
+                };
+
+                assert_eq!($states.get(hand_type).level().get(), expected);
+            }
+        };
+    }
+
+    macro_rules! assert_score {
+        ($states:ident, { $($hand_type:ident => ($chips:literal, $mult:literal ))*$(,)? }) => {
+            for hand_type in HandType::variants() {
+                let expected = match hand_type {
+                    $($hand_type => { (Chips($chips), Mult($mult)) })*
+                    _ => hand_type.base_score(),
+                };
+
+                assert_eq!($states.get(hand_type).score(), expected);
+            }
+        };
+    }
+
     #[test]
     fn base_score() {
         let states = HandTypeStates::default();
-        assert_eq!(states.get(HighCard).score(), HighCard.base_score());
+
+        assert_levels!(states, {});
+        assert_score!(states, {});
     }
 
     #[test]
     fn level_up_once() {
-        let mut states = HandTypeStates::default();
+        let states = HandTypeStates::default().level_up(HighCard);
 
-        states.get_mut(HighCard).level_up();
-
-        assert_eq!(states.get(HighCard).score(), (Chips(15), Mult(2)));
+        assert_levels!(states, { HighCard => 2 });
+        assert_score!(states, { HighCard => (15, 2)});
     }
 
     #[test]
     fn level_up_twice() {
-        let mut states = HandTypeStates::default();
+        let states = HandTypeStates::default()
+            .level_up(HighCard)
+            .level_up(HighCard);
 
-        states.get_mut(HighCard).level_up();
-        states.get_mut(HighCard).level_up();
+        assert_levels!(states, { HighCard => 3 });
+        assert_score!(states, { HighCard => (25, 3)});
+    }
 
-        assert_eq!(states.get(HighCard).score(), (Chips(25), Mult(3)));
+    #[test]
+    fn use_planet() {
+        let states = HandTypeStates::default().use_planet(Planet::Pluto);
+
+        assert_levels!(states, { HighCard => 2 });
+        assert_score!(states, { HighCard => (15, 2)});
+    }
+
+    #[test]
+    fn use_black_hole() {
+        let states = HandTypeStates::default().use_black_hole();
+
+        for hand_type in HandType::variants() {
+            assert_eq!(states.get(hand_type).level().get(), 2);
+        }
     }
 
     #[test]
@@ -166,11 +212,11 @@ mod tests {
 
     #[test]
     fn unlocked_secret() {
-        let mut states = HandTypeStates::default();
+        let states = HandTypeStates::default();
 
         assert!(!states.get(FlushFive).is_unlocked());
 
-        states.get_mut(FlushFive).plays_up();
+        let states = states.plays_up(FlushFive);
 
         assert!(states.get(FlushFive).is_unlocked())
     }
